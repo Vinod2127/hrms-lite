@@ -1,51 +1,22 @@
-import type { Attendance, Employee, AttendanceStatus } from './types'
+// Base URL (works for both local & production)
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "";
 
-const BASE = (import.meta.env.VITE_API_BASE_URL as string) || '/api'
-
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+// Common fetch wrapper
+export async function apiRequest(
+  endpoint: string,
+  options: RequestInit = {}
+) {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     ...options,
-  })
+  });
 
-  const contentType = res.headers.get('content-type')
-  const body = contentType?.includes('application/json') ? await res.json() : null
-
-  if (!res.ok) {
-    const message = body?.message || res.statusText || 'Unknown error'
-    throw new Error(message)
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status}`);
   }
 
-  return body as T
-}
-
-export function getEmployees() {
-  return request<Employee[]>('/employees')
-}
-
-export function createEmployee(payload: { id: string; name: string; email: string; department: string }) {
-  return request<Employee>('/employees', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-}
-
-export function deleteEmployee(id: string) {
-  return request<void>(`/employees/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  })
-}
-
-export function getAttendance(employeeId?: string) {
-  const query = employeeId ? `?employeeId=${encodeURIComponent(employeeId)}` : ''
-  return request<Attendance[]>(`/attendance${query}`)
-}
-
-export function createAttendance(payload: { employeeId: string; date: string; status: AttendanceStatus }) {
-  return request<Attendance>('/attendance', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
+  return response.json();
 }
