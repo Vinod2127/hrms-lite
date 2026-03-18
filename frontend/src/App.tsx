@@ -1,145 +1,57 @@
-import { useEffect, useMemo, useState } from 'react'
-import './App.css'
-import type { Attendance, Employee } from './types'
-import * as api from './api'
-import EmployeeSection from './components/EmployeeSection'
-import AttendanceSection from './components/AttendanceSection'
+import { useEffect, useState } from "react";
+import { apiRequest } from "./api";
 
-type View = 'employees' | 'attendance'
+function App() {
+  const [employees, setEmployees] = useState([]);
 
-export default function App() {
-  const [view, setView] = useState<View>('employees')
-  const [employees, setEmployees] = useState<Employee[]>([])
-  const [attendance, setAttendance] = useState<Attendance[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
-
-  const selectedEmployeeName = useMemo(() => {
-    const e = employees.find((emp) => emp.id === selectedEmployee)
-    return e ? e.name : null
-  }, [employees, selectedEmployee])
-
+  // GET employees
   useEffect(() => {
-    loadData()
-  }, [])
+    fetchEmployees();
+  }, []);
 
-  useEffect(() => {
-    if (selectedEmployee) {
-      loadAttendance(selectedEmployee)
-    }
-  }, [selectedEmployee])
-
-  async function loadData() {
+  const fetchEmployees = async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const [employeesList, attendanceList] = await Promise.all([api.getEmployees(), api.getAttendance()])
-      setEmployees(employeesList)
-      setAttendance(attendanceList)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data')
-    } finally {
-      setLoading(false)
+      const data = await apiRequest("/api/employees");
+      setEmployees(data);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
     }
-  }
+  };
 
-  async function loadAttendance(employeeId?: string) {
+  // ADD employee
+  const addEmployee = async () => {
     try {
-      setError(null)
-      const attendanceList = await api.getAttendance(employeeId)
-      setAttendance(attendanceList)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load attendance')
+      const newEmp = {
+        name: "Test User",
+        role: "Developer",
+      };
+
+      await apiRequest("/api/employees", {
+        method: "POST",
+        body: JSON.stringify(newEmp),
+      });
+
+      fetchEmployees(); // refresh
+    } catch (error) {
+      console.error("Error adding employee:", error);
     }
-  }
-
-  async function handleCreateEmployee(payload: { id: string; name: string; email: string; department: string }) {
-    const created = await api.createEmployee(payload)
-    setEmployees((prev) => [...prev, created])
-  }
-
-  async function handleDeleteEmployee(id: string) {
-    await api.deleteEmployee(id)
-    setEmployees((prev) => prev.filter((e) => e.id !== id))
-    if (selectedEmployee === id) {
-      setSelectedEmployee(null)
-      await loadAttendance()
-    }
-  }
-
-  async function handleCreateAttendance(payload: { employeeId: string; date: string; status: 'Present' | 'Absent' }) {
-    const record = await api.createAttendance(payload)
-    setAttendance((prev) => [record, ...prev])
-  }
-
-  const statusMessage = useMemo(() => {
-    if (loading) return 'Loading…'
-    if (error) return `Error: ${error}`
-    return selectedEmployee ? `Showing attendance for ${selectedEmployeeName}` : 'Showing all attendance records'
-  }, [error, loading, selectedEmployee, selectedEmployeeName])
+  };
 
   return (
-    <div className="app">
-      <header className="header">
-        <div className="brand">
-          <h1>HRMS Lite</h1>
-          <p className="subtitle">Employee & Attendance management</p>
-        </div>
+    <div>
+      <h1>HRMS Lite</h1>
 
-        <div className="tabs" role="tablist">
-          <button
-            type="button"
-            className={`tab ${view === 'employees' ? 'active' : ''}`}
-            onClick={() => setView('employees')}
-            role="tab"
-            aria-selected={view === 'employees'}
-          >
-            Employees
-          </button>
-          <button
-            type="button"
-            className={`tab ${view === 'attendance' ? 'active' : ''}`}
-            onClick={() => setView('attendance')}
-            role="tab"
-            aria-selected={view === 'attendance'}
-          >
-            Attendance
-          </button>
-        </div>
-      </header>
+      <button onClick={addEmployee}>Add Employee</button>
 
-      <main className="main">
-        <div className="status">{statusMessage}</div>
-
-        {loading ? (
-          <div className="panel">
-            <p>Loading data…</p>
-          </div>
-        ) : view === 'employees' ? (
-          <EmployeeSection
-            employees={employees}
-            onCreate={handleCreateEmployee}
-            onDelete={handleDeleteEmployee}
-            onSelectEmployee={(id) => {
-              setSelectedEmployee(id)
-              setView('attendance')
-            }}
-            selectedEmployeeId={selectedEmployee ?? undefined}
-          />
-        ) : (
-          <AttendanceSection
-            employees={employees}
-            attendance={attendance}
-            onCreateAttendance={handleCreateAttendance}
-            selectedEmployeeId={selectedEmployee}
-          />
-        )}
-      </main>
-
-      <footer className="footer">
-        <p>Tip: Make sure the backend server is running at <code>http://localhost:4000</code>.</p>
-      </footer>
+      <ul>
+        {employees.map((emp: any, index: number) => (
+          <li key={index}>
+            {emp.name} - {emp.role}
+          </li>
+        ))}
+      </ul>
     </div>
-  )
+  );
 }
+
+export default App;
