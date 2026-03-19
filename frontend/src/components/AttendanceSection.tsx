@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import type { Attendance, Employee } from '../types'
 
 interface Props {
@@ -19,6 +19,11 @@ export default function AttendanceSection({
   const [form, setForm] = useState({ employeeId: selectedEmployeeId ?? '', date: '', status: 'Present' as 'Present' | 'Absent' })
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  // Sync form with selected employee ID
+  useEffect(() => {
+    setForm((prev) => ({ ...prev, employeeId: selectedEmployeeId ?? '' }))
+  }, [selectedEmployeeId])
 
   const sortedEmployees = useMemo(() => [...employees].sort((a, b) => a.name.localeCompare(b.name)), [employees])
   const filteredAttendance = useMemo(() => {
